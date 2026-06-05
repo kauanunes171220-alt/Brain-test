@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Brain Training - Jogos Cognitivos</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap');
+
+        /* ==========================================
+           VARIÁVEIS GERAIS
+        ========================================== */
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: rgba(56, 189, 248, 0.15);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --danger: #fb7185;
+            --success: #4ade80;
+            --warning: #facc15;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Nunito', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        /* ==========================================
+           ESTRUTURA BASE E BACKGROUND
+        ========================================== */
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e293b, #0f172a, #172033);
+            background-size: 400% 400%; 
+            color: var(--text-main); 
+            min-height: 100vh;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            overflow: hidden; 
+            transition: background 0.5s ease;
+        }
+
+        /* Classe para Gráficos Altos (Animação de Fundo) */
+        body.high-graphics {
+            animation: gradientBG 20s ease infinite;
+        }
+
+        @keyframes gradientBG { 
+            0% { background-position: 0% 50%; } 
+            50% { background-position: 100% 50%; } 
+            100% { background-position: 0% 50%; } 
+        }
+
+        /* Sistema de Partículas */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 8000;
+        }
+
+        /* OVERLAY EFEITO DANO */
+        #damage-overlay {
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh;
+            pointer-events: none; 
+            z-index: 9999;
+            box-shadow: inset 0 0 0vw var(--danger); 
+            opacity: 0;
+            transition: opacity 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        #damage-overlay.active {
+            opacity: 1; 
+            box-shadow: inset 0 0 10vw rgba(251, 113, 133, 0.8);
+        }
+
+        /* ==========================================
+           CONTAINER PRINCIPAL (TELAS)
+        ========================================== */
+        .screen {
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: flex-start;
+            width: 95%; 
+            max-width: 480px; /* Padrão Mobile */
+            max-height: 85vh; 
+            padding: 40px 25px; 
+            text-align: center;
+            background: var(--glass-bg); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); 
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 0 20px var(--glass-shadow);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow-y: auto; 
+            position: relative;
+            z-index: 10;
+            transition: max-width 0.4s ease, padding 0.4s ease;
+        }
+
+        /* Modo PC/Console */
+        body.pc-mode .screen {
+            max-width: 800px;
+            padding: 50px 40px;
+            max-height: 90vh;
+            border-radius: 20px;
+        }
+
+        body.pc-mode .menu-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        /* Scrollbar customizada */
+        .screen::-webkit-scrollbar { width: 6px; }
+        .screen::-webkit-scrollbar-track { background: transparent; }
+        .screen::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+        .screen::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+        .screen.active { display: flex; }
+
+        /* ==========================================
+           TIPOGRAFIA E BOTÕES
+        ========================================== */
+        h1 { font-size: 2.5rem; margin-bottom: 5px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .subtitle { color: var(--text-muted); margin-bottom: 30px; font-weight: 600; font-size: 1.1rem; }
+        h2 { font-size: 1.8rem; margin-bottom: 10px; color: var(--accent); text-shadow: 0 2px 10px rgba(56, 189, 248, 0.3); }
+        
+        .highscore-badge { 
+            font-size: 0.9rem; color: var(--warning); font-weight: 800; margin-bottom: 20px; 
+            background: rgba(0,0,0,0.4); padding: 6px 16px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+        }
+
+        .btn-config {
+            position: absolute; top: 20px; right: 20px;
+            background: transparent; border: none; color: var(--text-muted);
+            font-size: 1.5rem; cursor: pointer; transition: 0.3s;
+        }
+        .btn-config:hover { color: white; transform: rotate(45deg); }
+
+        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; margin-bottom: 10px; transition: 0.3s; }
+
+        .btn-menu {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 100%; padding: 14px; border-radius: 18px; border: none;
+            font-size: 1.2rem; font-weight: 800; color: white; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2), inset 0 -3px 0 rgba(0,0,0,0.2);
+            position: relative; overflow: hidden;
+        }
+
+        .btn-menu::after { 
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; 
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%); 
+            transform: skewX(-25deg); transition: 0.5s; 
+        }
+        .btn-menu:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 -3px 0 rgba(0,0,0,0.2); filter: brightness(1.1); }
+        .btn-menu:hover::after { left: 200%; }
+        .btn-menu:active { transform: translateY(2px); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn-menu span.hs-text { font-size: 0.85rem; font-weight: 600; opacity: 0.9; margin-top: 4px; background: rgba(0,0,0,0.2); padding: 2px 10px; border-radius: 10px; }
+        
+        .btn-music { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+        .btn-number { background: linear-gradient(135deg, #3b82f6, #0ea5e9); }
+        .btn-word { background: linear-gradient(135deg, #10b981, #14b8a6); }
+        .btn-swift { background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+        .btn-chimp { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+        .btn-stroop { background: linear-gradient(135deg, #d946ef, #be185d); }
+        .btn-math { background: linear-gradient(135deg, #06b6d4, #0284c7); }
+        
+        .btn-secondary { 
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: var(--text-muted); 
+            padding: 12px 28px; border-radius: 20px; font-weight: 800; margin-top: 30px; cursor: pointer; transition: 0.2s; 
+        }
+        .btn-secondary:hover { color: white; background: rgba(255,255,255,0.1); border-color: white; }
+
+        /* ==========================================
+           CONTROLES DE CONFIGURAÇÃO (NOVOS)
+        ========================================== */
+        .config-group {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            text-align: left;
+            border: 1px solid var(--glass-border);
+        }
+
+        .config-group label {
+            display: block;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--accent);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .config-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            height: 8px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .config-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        .config-select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .config-select option {
+            background: var(--bg-color);
+        }
+
+        /* ==========================================
+           COMPONENTES DE JOGO
+        ========================================== */
+        .stats { font-size: 1.3rem; font-weight: 900; background: rgba(0,0,0,0.3); padding: 8px 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); }
+        .progress-bar { width: 100%; height: 10px; background: rgba(0,0,0,0.4); border-radius: 5px; overflow: hidden; margin-bottom: 25px; display: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .progress-fill { height: 100%; background: var(--accent); width: 100%; transform-origin: left; box-shadow: 0 0 10px var(--accent); }
+
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
+        .action-btn { background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); color: white; padding: 18px 10px; font-size: 1.2rem; font-weight: 900; border-radius: 18px; cursor: pointer; text-transform: uppercase; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .action-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.15); }
+        .btn-green:active { border-color: var(--success); color: var(--success); box-shadow: 0 0 15px var(--success); }
+        .btn-red:active { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 15px var(--danger); }
+
+        .game-display-text { font-size: 3.5rem; font-weight: 900; text-transform: uppercase; margin: 30px 0; text-shadow: 0 5px 20px rgba(0,0,0,0.5); letter-spacing: 2px; min-height: 80px; display: flex; align-items: center; justify-content: center; }
+
+        .input-box { width: 100%; padding: 18px; font-size: 2rem; text-align: center; border: none; border-radius: 18px; outline: none; margin-bottom: 15px; background: rgba(0,0,0,0.4); color: white; border: 2px solid var(--glass-border); letter-spacing: 5px; font-weight: 900; transition: 0.3s; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); }
+        .input-box:focus { border-color: var(--accent); background: rgba(0,0,0,0.6); box-shadow: inset 0 4px 10px rgba(0,0,0,0.5), 0 0 15px rgba(56, 189, 248, 0.3); }
+
+        /* GRIDS DOS MINIGAMES */
+        .music-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 10px 0 20px; width: 100%; max-width: 300px; aspect-ratio: 1; pointer-events: auto; }
+        .music-grid.disabled { pointer-events: none; }
+        .pad { border-radius: 20px; cursor: pointer; transition: opacity 0.15s, filter 0.15s; box-shadow: inset 0 0 20px rgba(0,0,0,0.4), 0 6px 15px rgba(0,0,0,0.3); opacity: 0.6; }
+        .pad:active { opacity: 1; transform: scale(0.92); filter: brightness(1.5); box-shadow: 0 0 25px currentColor, inset 0 0 15px rgba(255,255,255,0.6); }
+        .pad.bounce-active { animation: bouncePad 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 1; }
+        .pad.correct-hint { animation: blinkCorrect 0.5s infinite; opacity: 1; z-index: 10; }
+
+        .chimp-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; margin: 10px 0; }
+        .chimp-grid.disabled { pointer-events: none; }
+        .chimp-block { aspect-ratio: 1; background: #f8fafc; color: #0f172a; border-radius: 12px; font-size: 1.6rem; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.1s, background 0.3s; box-shadow: 0 6px 10px rgba(0,0,0,0.3), inset 0 -3px 0 rgba(0,0,0,0.2); }
+        .chimp-block:active { transform: scale(0.9); box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .chimp-hidden-text { color: transparent !important; }
+        .chimp-invisible { visibility: hidden; }
+        .chimp-error { background: var(--danger) !important; color: white !important; box-shadow: 0 0 20px var(--danger); }
+
+        .swift-highlight { color: var(--accent); transform: scale(1.3); display: inline-block; text-shadow: 0 0 15px var(--accent); margin: 0 5px; }
+
+        .result-box { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 20px; width: 100%; text-align: center; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .result-box p { font-size: 1.1rem; margin: 8px 0; line-height: 1.4; }
+        .highlight { color: var(--success); font-weight: 900; }
+        .wrong-strike { color: var(--danger); text-decoration: line-through; font-weight: 900; }
+
+        /* ==========================================
+           ANIMAÇÕES GERAIS
+        ========================================== */
+        @keyframes popIn { 
+            from { opacity: 0; transform: scale(0.92) translateY(30px); } 
+            to { opacity: 1; transform: scale(1) translateY(0); } 
+        }
+        @keyframes shake { 
+            0%, 100% { transform: translateX(0); } 
+            20%, 60% { transform: translateX(-8px); } 
+            40%, 80% { transform: translateX(8px); } 
+        }
+        @keyframes blinkCorrect { 
+            0%, 100% { box-shadow: 0 0 30px white; border: 3px solid white; transform: scale(1.1); filter: brightness(1.5); } 
+            50% { box-shadow: none; border: none; transform: scale(1); filter: brightness(1); } 
+        }
+        @keyframes bouncePad { 
+            0% { transform: scale(1); } 
+            50% { transform: scale(0.85); box-shadow: 0 0 30px currentColor; filter: brightness(1.5); } 
+            100% { transform: scale(1); } 
+        }
+    </style>
+</head>
+<body class="high-graphics mobile-mode">
+
+    <div id="damage-overlay"></div>
+    
+    <canvas id="particle-canvas"></canvas>
+
+    <div id="menu-screen" class="screen active">
+        <button class="btn-config" onclick="showScreen('config-screen')">⚙️</button>
+        <h1>Brain Training</h1>
+        <div class="subtitle">Exercite sua mente</div>
+        
+        <div class="menu-grid">
+            <button class="btn-menu btn-music" onclick="startGame('music')">🎵 Music Memory <span class="hs-text" id="hs-menu-music">Recorde: 0</span></button>
+            <button class="btn-menu btn-number" onclick="startGame('number')">🔢 Number Memory <span class="hs-text" id="hs-menu-number">Recorde: 0</span></button>
+            <button class="btn-menu btn-word" onclick="startGame('word')">📖 Word Memory <span class="hs-text" id="hs-menu-word">Recorde: 0</span></button>
+            <button class="btn-menu btn-swift" onclick="startGame('swift')">⚡ Dir. Swift <span class="hs-text" id="hs-menu-swift">Recorde: 0</span></button>
+            <button class="btn-menu btn-chimp" onclick="startGame('chimp')">🐵 Chimp Test <span class="hs-text" id="hs-menu-chimp">Recorde: 0</span></button>
+            <button class="btn-menu btn-stroop" onclick="startGame('stroop')">🎨 Stroop Effect <span class="hs-text" id="hs-menu-stroop">Recorde: 0</span></button>
+            <button class="btn-menu btn-math" onclick="startGame('math')">🧮 Cálculo Rápido <span class="hs-text" id="hs-menu-math">Recorde: 0</span></button>
+        </div>
+    </div>
+
+    <div id="config-screen" class="screen">
+        <h2>Configurações</h2>
+        <div class="subtitle">Ajuste sua experiência</div>
+        
+        <div class="config-group">
+            <label>Áudio e Som</label>
+            <div class="config-row">
+                <span>Som Global</span>
+                <input type="checkbox" id="toggle-sound-chk" checked onchange="toggleSound(this.checked)" style="transform: scale(1.5);">
+            </div>
+            <div class="config-row">
+                <span>Volume: <span id="vol-label">100%</span></span>
+            </div>
+            <input type="range" class="config-slider" id="volume-slider" min="0" max="100" value="100" oninput="changeVolume(this.value)">
+        </div>
+
+        <div class="config-group">
+            <label>Visual e Gráficos</label>
+            <div class="config-row" style="margin-bottom: 5px;">
+                <span>Modo de Exibição</span>
+            </div>
+            <select class="config-select" id="mode-select" onchange="changeDisplayMode(this.value)" style="margin-bottom: 15px;">
+                <option value="mobile">Mobile (Compacto)</option>
+                <option value="pc">PC / Console (Expandido)</option>
+            </select>
+
+            <div class="config-row" style="margin-bottom: 5px;">
+                <span>Qualidade (Partículas/Fundo)</span>
+            </div>
+            <select class="config-select" id="graphics-select" onchange="changeGraphics(this.value)">
+                <option value="high">Alta (Animações + Partículas)</option>
+                <option value="low">Baixa (Economia de Bateria)</option>
+            </select>
+        </div>
+
+        <div class="config-group" style="border-color: rgba(251, 113, 133, 0.3);">
+            <label style="color: var(--danger);">Zona de Perigo</label>
+            <button class="action-btn btn-red" style="width: 100%; text-transform: none; border-color: var(--danger); color: var(--danger);" onclick="resetScores()">🗑️ Resetar Recordes</button>
+        </div>
+
+        <button class="btn-secondary" style="margin-top: 10px; width: 100%;" onclick="showMenu()">Salvar e Voltar</button>
+    </div>
+
+    <div id="music-screen" class="screen">
+        <h2>Music Memory</h2>
+        <div class="highscore-badge">🏆 Recorde: <span id="hs-game-music">0</span></div>
+        <div class="stats">Level: <span id="music-level">1</span></div>
+        <div class="music-grid" id="music-grid-container"></div>
+        <button class="btn-secondary" onclick="showMenu()">Voltar</button>
+    </div>
+
+    <div id="number-screen" class="screen">
+        <h2>Number Memory</h2>
+        <div class="highscore-badge">🏆 Recorde: <span id="hs-game-number">0</span></div>
+        <div class="stats">Level: <span id="number-level">1</span></div>
+        <div class="game-display-text" id="number-display" style="letter-spacing: 8px;"></div>
+        <div class="progress-bar" id="num-progress-bar"><div class="progress-fill" id="num-progress-fill"></div></div>
+        <div id="number-input-container" style="display:none; width: 100%; flex-direction: column;">
+            <input type="tel" class="input-box" id="number-input" placeholder="Digite..." autocomplete="off">
+            <button class="btn-menu btn-number" onclick="checkNumber()" style="flex-direction: row; font-size: 1.2rem;">Confirmar</button>
+        </div>
+        <button class="btn-secondary" onclick="showMenu()">Voltar</button>
+    </div>
+
+    <div id="word-screen" class="screen">
+        <h2>Word Memory</h2>
+        <div class="highscore-badge">🏆 Recorde: <span id="hs-game-word">0</span></div>
+        <div class="stats">Score: <span id="word-score">0</span></div>
+        <div class="game-display-text" id="word-display" style="font-size: 2.8rem; word-break: break-word;">PALAVRA</div>
+        <div class="action-grid">
+            <button class="action-btn btn-green" onclick="checkWord(false)">VISTA</button>
+            <button class="action-btn btn-red" onclick="checkWord(true)">NOVA</button>
+        </div>
+        <button class="btn-secondary" onclick="showMenu()">Voltar</button>
+    </div>
+
+    <div id="swift-screen" class="screen">
+        <h2>Directional Swift</h2>
+        <div class="highscore-badge">🏆 Recorde: <span id="hs-game-swift">0</span></div>
+        <div class="stats">Score: <span id="swift-score">0</span></div>
+        <div class="progress-bar" style="display:block;"><div class="progress-fill" id="swift-progress"></div></div>
+        <div class="game-display-text" id="swift-display" style="letter-spacing: 10px; font-family: monospace;"><<<><<</div>
+        <div class="action-grid">
+            <button class="action-btn" onclick="checkSwift('<')">ESQUERDA</button>
+            <button class="action-btn" onclick="checkSwift('>')">DIREITA</button>
+        </div>
+        <button class="btn-secondary" onclick="showMenu()">Voltar</button>
+    </div>
+
+    <div id="chimp-screen" class="screen">
+        <h2>Chimp Test</h2>
+        <div class="highscore-badge">🏆 Recorde: <span id="hs-game-chimp">0</span></div>
+        <div class="stats">Números: <span id="chimp-level">4</span></div>
+        <div class="chimp-grid" id="chimp-container"></div>
+        <button class="btn-secondary" onclick="showMenu()">Voltar</button>
+    </div>
+
+    <div id="stroop-screen" class="screen">
+        <h2>Stroop Effect</h2>
+        <div class="highscore-badge">🏆 Recorde: <span id="hs-game-stroop">0</span></div>
+        <div class="stats">Score: <span id="stroop-score">0</span></div>
+        <div class="progress-bar" style="display:block;"><div class="progress-fill" id="stroop-progress"></div></div>
+        <div class="game-display-text" id="stroop-word">AZUL</div>
+        <div class="action-grid" id="stroop-buttons"></div>
+        <button class="btn-secondary" onclick="showMenu()">Voltar</button>
+    </div>
+
+    <div id="math-screen" class="screen">
+        <h2>Cálculo Rápido</h2>
+        <div class="highscore-badge">🏆 Recorde: <span id="hs-game-math">0</span></div>
+        <div class="stats">Score: <span id="math-score">0</span></div>
+        <div class="progress-bar" style="display:block;"><div class="progress-fill" id="math-progress"></div></div>
+        <div class="game-display-text" id="math-equation" style="font-size: 3rem;">5 + 5 = ?</div>
+        <div style="display: flex; gap: 10px; width: 100%;">
+            <input type="tel" class="input-box" id="math-input" placeholder="?" autocomplete="off" style="margin-bottom:0;">
+            <button class="btn-menu btn-math" style="width: 80px; padding: 0; flex-direction: row; font-size: 1.5rem;" onclick="checkMath()">✓</button>
+        </div>
+        <button class="btn-secondary" onclick="showMenu()">Voltar</button>
+    </div>
+
+    <div id="gameover-screen" class="screen">
+        <h1>Fim de Jogo</h1>
+        <h2 style="color: var(--text-main); margin-bottom: 25px;">Pontuação: <br><span style="font-size: 3rem; color: var(--accent)" id="final-score"></span></h2>
+        <div id="new-record-msg" style="display: none; color: var(--warning); font-weight: 900; font-size: 1.3rem; margin-bottom: 15px; animation: popIn 0.5s;">🎉 NOVO RECORDE! 🎉</div>
+        <div id="error-details" class="result-box" style="display: none;"></div>
+        <button class="btn-menu" style="background: linear-gradient(135deg, #4ade80, #16a34a); color:#0f172a; flex-direction: row; margin-bottom: 10px;" onclick="restartCurrentGame()">Tentar Novamente</button>
+        <button class="btn-secondary" style="margin-top: 10px; width: 100%;" onclick="showMenu()">Menu Principal</button>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. SISTEMA DE PARTÍCULAS (VISUAL FX)
+        // ==========================================
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particlesArray = [];
+        let particlesEnabled = true;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color, speed, size) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.speedX = (Math.random() - 0.5) * speed;
+                this.speedY = (Math.random() - 0.5) * speed - (speed/2); // Tendência de subir
+                this.size = Math.random() * size + 2;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.02 + 0.01;
+                this.gravity = 0.05;
+            }
+            update() {
+                this.speedY += this.gravity;
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= this.decay;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+                if (particlesArray[i].life <= 0) {
+                    particlesArray.splice(i, 1);
+                    i--;
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        function spawnConfetti(amount = 30) {
+            if(!particlesEnabled) return;
+            const colors = ['#facc15', '#4ade80', '#38bdf8', '#fb7185', '#a855f7'];
+            const startX = window.innerWidth / 2;
+            const startY = window.innerHeight / 2;
+            for(let i = 0; i < amount; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                particlesArray.push(new Particle(startX, startY, color, 15, 6));
+            }
+        }
+
+        // ==========================================
+        // 2. CONFIGURAÇÕES GERAIS E ÁUDIO
+        // ==========================================
+        let soundEnabled = true;
+        let globalVolume = 1.0; // 0.0 até 1.0
+
+        let audioCtx;
+        function initAudio() { 
+            if (!audioCtx && soundEnabled) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+            }
+        }
+
+        function toggleSound(checked) {
+            soundEnabled = checked;
+            if (soundEnabled) playClick();
+        }
+
+        function changeVolume(val) {
+            globalVolume = val / 100;
+            document.getElementById('vol-label').innerText = val + '%';
+            if(soundEnabled) {
+                // Toca um pequeno som para o usuário testar o volume
+                fallbackBeep(400, 'sine', 0.1);
+            }
+        }
+
+        function changeDisplayMode(mode) {
+            if(mode === 'pc') {
+                document.body.classList.remove('mobile-mode');
+                document.body.classList.add('pc-mode');
+            } else {
+                document.body.classList.remove('pc-mode');
+                document.body.classList.add('mobile-mode');
+            }
+        }
+
+        function changeGraphics(quality) {
+            if(quality === 'high') {
+                document.body.classList.add('high-graphics');
+                particlesEnabled = true;
+            } else {
+                document.body.classList.remove('high-graphics');
+                particlesEnabled = false;
+                particlesArray = []; // Limpa partículas ativas
+            }
+        }
+
+        // Sistema de beeps nativos usando AudioContext e Volume Global
+        function fallbackBeep(freq, type, duration) {
+            if (!soundEnabled || globalVolume === 0) return; 
+            initAudio(); 
+            if (!audioCtx) return;
+            
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain();
+            
+            osc.type = type; 
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            // Aplica o volume global à intensidade do som
+            let maxGain = 0.1 * globalVolume; 
+            
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(maxGain, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gain); 
+            gain.connect(audioCtx.destination);
+            osc.start(); 
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playTone(freq, duration) {
+            if (!soundEnabled || globalVolume === 0) return; 
+            initAudio(); 
+            if (!audioCtx) return;
+            
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            // Aplica o volume global
+            let maxGain = 0.3 * globalVolume; 
+            
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(maxGain, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gain); 
+            gain.connect(audioCtx.destination);
+            osc.start(); 
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playClick() { 
+            fallbackBeep(400, 'sine', 0.1); 
+        }
+        function playSuccess() { 
+            fallbackBeep(600, 'sine', 0.1); 
+            setTimeout(() => fallbackBeep(800, 'sine', 0.2), 100);
+            spawnConfetti(15); // Efeito visual de sucesso
+        }
+        function playError() { 
+            fallbackBeep(150, 'sawtooth', 0.3); 
+            setTimeout(() => fallbackBeep(100, 'sawtooth', 0.4), 150); 
+        }
+
+        // Adiciona som de click aos botões padrões
+        document.querySelectorAll('.btn-secondary, .action-btn').forEach(b => b.addEventListener('click', playClick));
+
+
+        // ==========================================
+        // 3. SISTEMA DE TELAS E RECORDE (HIGHSCORES)
+        // ==========================================
+        const gameList = ['music', 'number', 'word', 'swift', 'chimp', 'stroop', 'math'];
+        let currentGame = '';
+        let globalTimer = null; 
+
+        function resetScores() {
+            if(confirm("Tem certeza que deseja apagar todos os recordes? Esta ação não pode ser desfeita.")) {
+                gameList.forEach(g => localStorage.removeItem('hs_' + g));
+                updateHighscoresUI();
+                playClick();
+                alert("Recordes resetados com sucesso!");
+            }
+        }
+
+        function getHighscore(game) { 
+            return parseInt(localStorage.getItem('hs_' + game)) || 0; 
+        }
+
+        function updateHighscoresUI() {
+            gameList.forEach(g => {
+                let score = getHighscore(g);
+                let menuLabel = document.getElementById(`hs-menu-${g}`);
+                let gameLabel = document.getElementById(`hs-game-${g}`);
+                
+                if(menuLabel) menuLabel.innerText = `Recorde: ${score}`;
+                if(gameLabel) gameLabel.innerText = score;
+            });
+        }
+        window.onload = updateHighscoresUI;
+
+        function showScreen(id) {
+            clearDamageOverlay();
+            if(id === 'menu-screen') updateHighscoresUI();
+            
+            document.querySelectorAll('.screen').forEach(s => {
+                s.classList.remove('active');
+                s.scrollTop = 0; // Reseta rolagem ao trocar de tela
+            });
+            
+            document.getElementById(id).classList.add('active');
+            clearTimers(); 
+        }
+
+        function showMenu() { 
+            playClick(); 
+            showScreen('menu-screen'); 
+        }
+
+        function startGame(game) {
+            playClick(); 
+            currentGame = game; 
+            initAudio(); 
+            clearDamageOverlay();
+            
+            document.getElementById('error-details').style.display = 'none';
+            document.getElementById('new-record-msg').style.display = 'none';
+            
+            if (game === 'music') startMusicGame();
+            if (game === 'number') startNumberGame();
+            if (game === 'word') startWordGame();
+            if (game === 'swift') startSwiftGame();
+            if (game === 'chimp') startChimpGame();
+            if (game === 'stroop') startStroopGame();
+            if (game === 'math') startMathGame();
+        }
+
+        function restartCurrentGame() { 
+            startGame(currentGame); 
+        }
+
+        function triggerDamageOverlay() {
+            document.getElementById('damage-overlay').classList.add('active');
+        }
+
+        function clearDamageOverlay() {
+            document.getElementById('damage-overlay').classList.remove('active');
+        }
+
+        function gameOver(scoreText, errorHTML = "", numericScore = 0) {
+            clearTimers(); 
+            triggerDamageOverlay();
+            playError();
+            
+            document.getElementById('final-score').innerHTML = scoreText;
+            let currentHS = getHighscore(currentGame);
+            
+            if(numericScore > currentHS) {
+                localStorage.setItem('hs_' + currentGame, numericScore);
+                document.getElementById('new-record-msg').style.display = 'block';
+                setTimeout(() => {
+                    playSuccess();
+                    spawnConfetti(80); // Mega explosão de confete para novo recorde!
+                }, 600);
+            }
+            
+            const screenElement = document.getElementById(currentGame + '-screen');
+            screenElement.style.animation = "shake 0.4s";
+            
+            if (errorHTML) {
+                const errDiv = document.getElementById('error-details');
+                errDiv.innerHTML = errorHTML; 
+                errDiv.style.display = 'block';
+            }
+            
+            setTimeout(() => {
+                screenElement.style.animation = "popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                showScreen('gameover-screen');
+            }, 600);
+        }
+
+        function clearTimers() {
+            if(globalTimer) clearTimeout(globalTimer);
+            document.querySelectorAll('.progress-fill').forEach(el => el.style.transition = 'none');
+        }
+
+        function runProgressBar(fillId, timeMs, onComplete) {
+            clearTimers();
+            const fill = document.getElementById(fillId);
+            
+            fill.style.transition = 'none'; 
+            fill.style.transform = 'scaleX(1)';
+            void fill.offsetWidth; // Força o reflow do CSS
+            
+            fill.style.transition = `transform ${timeMs}ms linear`;
+            fill.style.transform = 'scaleX(0)';
+            
+            globalTimer = setTimeout(onComplete, timeMs);
+        }
+
+        // ==========================================
+        // 4. LÓGICA DOS JOGOS
+        // ==========================================
+
+        // --- MUSIC MEMORY ---
+        const musicColors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef'];
+        const musicFreqs = [261.6, 293.7, 329.6, 349.2, 392.0, 440.0, 493.9, 523.3, 587.3];
+        let musicSeq = [], musicStep = 0, musicLevel = 1, musicWaiting = false;
+
+        function startMusicGame() {
+            const container = document.getElementById('music-grid-container');
+            container.innerHTML = ''; 
+            container.classList.remove('disabled');
+            
+            for(let i=0; i<9; i++) {
+                const pad = document.createElement('div');
+                pad.className = 'pad'; 
+                pad.id = `pad-${i}`;
+                pad.style.backgroundColor = musicColors[i];
+                pad.onclick = () => handlePadClick(i);
+                container.appendChild(pad);
+            }
+            musicSeq = []; 
+            musicLevel = 1; 
+            showScreen('music-screen'); 
+            nextMusicRound();
+        }
+
+        function nextMusicRound() {
+            musicWaiting = false; 
+            musicStep = 0;
+            document.getElementById('music-level').innerText = musicLevel;
+            musicSeq.push(Math.floor(Math.random() * 9));
+            setTimeout(playMusicSeq, 800);
+        }
+
+        function playMusicSeq() {
+            let delay = 0;
+            let speed = Math.max(300, 600 - (musicLevel * 20)); 
+            
+            musicSeq.forEach((padIdx) => { 
+                setTimeout(() => activatePad(padIdx), delay); 
+                delay += speed; 
+            });
+            
+            setTimeout(() => { musicWaiting = true; }, delay);
+        }
+
+        function activatePad(index) {
+            const pad = document.getElementById(`pad-${index}`);
+            if(pad) { 
+                playTone(musicFreqs[index], 0.2); 
+                pad.classList.remove('bounce-active'); 
+                void pad.offsetWidth; 
+                pad.classList.add('bounce-active'); 
+                setTimeout(() => pad.classList.remove('bounce-active'), 350); 
+            }
+        }
+
+        function handlePadClick(index) {
+            if (!musicWaiting) return;
+            activatePad(index);
+            
+            if (index === musicSeq[musicStep]) {
+                musicStep++;
+                if (musicStep === musicSeq.length) { 
+                    musicLevel++; 
+                    setTimeout(playSuccess, 200); 
+                    nextMusicRound(); 
+                }
+            } else {
+                musicWaiting = false; 
+                document.getElementById('music-grid-container').classList.add('disabled');
+                
+                let correctPad = document.getElementById(`pad-${musicSeq[musicStep]}`);
+                if(correctPad) correctPad.classList.add('correct-hint');
+                
+                setTimeout(() => gameOver(`Level ${musicLevel}`, `<p>A correta estava piscando!</p>`, musicLevel), 1200);
+            }
+        }
+
+        // --- NUMBER MEMORY ---
+        let numLevel = 1, currentNum = "";
+        
+        function startNumberGame() { 
+            numLevel = 1; 
+            showScreen('number-screen'); 
+            nextNumberRound(); 
+        }
+        
+        function nextNumberRound() {
+            document.getElementById('number-level').innerText = numLevel;
+            document.getElementById('number-input-container').style.display = 'none';
+            document.getElementById('number-input').value = '';
+            
+            currentNum = "";
+            for (let i=0; i<numLevel; i++) {
+                currentNum += Math.floor(Math.random() * 10).toString();
+            }
+            
+            const display = document.getElementById('number-display');
+            display.innerText = currentNum; 
+            display.style.display = 'flex';
+            
+            document.getElementById('num-progress-bar').style.display = 'block';
+            let timeMs = Math.min(1000 + (numLevel * 400), 4000); 
+            
+            runProgressBar('num-progress-fill', timeMs, () => {
+                display.style.display = 'none'; 
+                document.getElementById('num-progress-bar').style.display = 'none';
+                document.getElementById('number-input-container').style.display = 'flex'; 
+                document.getElementById('number-input').focus();
+            });
+        }
+        
+        function checkNumber() {
+            playClick(); 
+            const guess = document.getElementById('number-input').value.trim();
+            
+            if (guess === currentNum) { 
+                numLevel++; 
+                playSuccess(); 
+                nextNumberRound(); 
+            } else { 
+                let resultStr = ""; 
+                let maxLen = Math.max(currentNum.length, guess.length);
+                for(let i = 0; i < maxLen; i++) {
+                    let c = currentNum[i] || ''; 
+                    let g = guess[i] || '';
+                    if(g === '') {
+                        resultStr += `<span class="wrong-strike" style="opacity:0.5">_</span>`;
+                    } else if (c === g) {
+                        resultStr += `<span class="highlight">${g}</span>`;
+                    } else {
+                        resultStr += `<span class="wrong-strike">${g}</span>`;
+                    }
+                }
+                gameOver(`Level ${numLevel}`, `<p>O número era:<br><span class="highlight" style="font-size:1.5rem; letter-spacing:3px;">${currentNum}</span></p><p>Você digitou:<br><span style="font-size:1.5rem; letter-spacing:3px; font-family:monospace;">${resultStr}</span></p>`, numLevel); 
+            }
+        }
+        
+        document.getElementById('number-input').addEventListener('keypress', e => { 
+            if (e.key === 'Enter') checkNumber(); 
+        });
+
+
+        // --- WORD MEMORY ---
+        const wordDictionary = [
+            "GATO", "MESA", "LIVRO", "CARRO", "SOL", "LUA", "TEMPO", "VIDA", "AMIGO", "NOITE", 
+            "DIA", "FOGO", "AGUA", "VENTO", "TERRA", "FLOR", "PEDRA", "CAMINHO", "SONHO", "PORTA", 
+            "CEU", "MAR", "ESTRELA", "ARVORE", "PAZ", "LUZ", "SOMBRA", "MUNDO", "CASA", "ROSTO",
+            "CORAÇÃO", "ESPERANÇA", "FUTURO", "PASSADO", "CIDADE", "MONTANHA", "RIO", "OCEANO", "VIAGEM", "VERDADE"
+        ];
+        let wordsSeen = [], currentWord = "", wordScore = 0, wordIsNew = true;
+
+        function startWordGame() { 
+            wordsSeen = []; 
+            wordScore = 0; 
+            showScreen('word-screen'); 
+            nextWordRound(); 
+        }
+        
+        function nextWordRound() {
+            document.getElementById('word-score').innerText = wordScore;
+            
+            if (wordsSeen.length > 0 && Math.random() < 0.45) {
+                currentWord = wordsSeen[Math.floor(Math.random() * wordsSeen.length)];
+                wordIsNew = false;
+            } else {
+                let unseen = wordDictionary.filter(w => !wordsSeen.includes(w));
+                if(unseen.length === 0) unseen = wordDictionary; 
+                currentWord = unseen[Math.floor(Math.random() * unseen.length)];
+                wordIsNew = true;
+            }
+            document.getElementById('word-display').innerText = currentWord;
+        }
+        
+        function checkWord(clickedNew) {
+            if ((clickedNew && wordIsNew) || (!clickedNew && !wordIsNew)) {
+                playSuccess();
+                if (wordIsNew) wordsSeen.push(currentWord);
+                wordScore++; 
+                nextWordRound();
+            } else {
+                let msg = clickedNew ? `A palavra <span class="highlight">${currentWord}</span> JÁ TINHA APARECIDO!` : `A palavra <span class="highlight">${currentWord}</span> era NOVA!`;
+                gameOver(`Score: ${wordScore}`, `<p>${msg}</p>`, wordScore);
+            }
+        }
+
+
+        // --- DIRECTIONAL SWIFT ---
+        let swiftScore = 0, swiftTargetDir = '<';
+
+        function startSwiftGame() { 
+            swiftScore = 0; 
+            showScreen('swift-screen'); 
+            nextSwiftRound(); 
+        }
+        
+        function nextSwiftRound() {
+            document.getElementById('swift-score').innerText = swiftScore;
+            
+            swiftTargetDir = Math.random() > 0.5 ? '<' : '>';
+            let distractDir = Math.random() > 0.5 ? '<' : '>';
+            
+            let htmlArrows = "";
+            for(let i=0; i<5; i++) {
+                if(i === 2) {
+                    htmlArrows += `<span class="swift-highlight">${swiftTargetDir}</span>`;
+                } else {
+                    htmlArrows += `<span>${distractDir}</span>`;
+                }
+            }
+            document.getElementById('swift-display').innerHTML = htmlArrows;
+
+            let timeMs = Math.max(800, 2500 - (swiftScore * 60)); 
+            runProgressBar('swift-progress', timeMs, () => gameOver(`Score: ${swiftScore}`, "Tempo esgotado!", swiftScore));
+        }
+        
+        function checkSwift(dir) {
+            if (dir === swiftTargetDir) { 
+                playSuccess(); 
+                swiftScore++; 
+                nextSwiftRound(); 
+            } else { 
+                gameOver(`Score: ${swiftScore}`, `<p>Você errou a direção central!</p>`, swiftScore); 
+            }
+        }
+
+
+        // --- CHIMP TEST ---
+        let chimpLevel = 4, chimpExpected = 1;
+
+        function startChimpGame() { 
+            chimpLevel = 4; 
+            showScreen('chimp-screen'); 
+            nextChimpRound(); 
+        }
+        
+        function nextChimpRound() {
+            chimpExpected = 1; 
+            document.getElementById('chimp-level').innerText = chimpLevel;
+            const container = document.getElementById('chimp-container');
+            container.innerHTML = ''; 
+            container.classList.remove('disabled');
+            
+            let slots = Array.from({length: 30}, (_, i) => i).sort(() => Math.random() - 0.5); 
+            let activeSlots = slots.slice(0, chimpLevel);
+            
+            for(let i=0; i<30; i++) {
+                const block = document.createElement('div');
+                block.className = 'chimp-block';
+                if(activeSlots.includes(i)) {
+                    let num = activeSlots.indexOf(i) + 1;
+                    block.innerText = num; 
+                    block.onclick = () => handleChimpClick(num, block);
+                } else {
+                    block.style.visibility = 'hidden';
+                }
+                container.appendChild(block);
+            }
+        }
+        
+        function handleChimpClick(num, element) {
+            playTone(400 + (num*40), 0.1); 
+            
+            if(num === chimpExpected) {
+                element.classList.add('chimp-invisible');
+                if(num === 1) {
+                    document.querySelectorAll('.chimp-block').forEach(b => { 
+                        if(b.innerText !== '1' && b.innerText !== '') b.classList.add('chimp-hidden-text'); 
+                    });
+                }
+                if(num === chimpLevel) { 
+                    chimpLevel++; 
+                    document.getElementById('chimp-container').classList.add('disabled'); 
+                    setTimeout(()=>{ playSuccess(); nextChimpRound(); }, 400); 
+                }
+                chimpExpected++;
+            } else {
+                document.getElementById('chimp-container').classList.add('disabled');
+                element.classList.add('chimp-error'); 
+                element.classList.remove('chimp-hidden-text', 'chimp-invisible');
+                document.querySelectorAll('.chimp-block').forEach(b => b.classList.remove('chimp-hidden-text'));
+                
+                let score = chimpLevel - 4; 
+                setTimeout(() => gameOver(`Score: ${score}`, `<p>Você clicou no <span class="wrong-strike" style="text-decoration:none">${num}</span>, mas era o <span class="highlight">${chimpExpected}</span>!</p>`, score), 1200);
+            }
+        }
+
+
+        // --- STROOP EFFECT ---
+        const stroopColors = [
+            {name: 'AZUL', hex: '#38bdf8'}, 
+            {name: 'VERMELHO', hex: '#fb7185'},
+            {name: 'VERDE', hex: '#4ade80'}, 
+            {name: 'AMARELO', hex: '#facc15'}
+        ];
+        let stroopScore = 0, stroopCorrectHex = "";
+
+        function startStroopGame() { 
+            stroopScore = 0; 
+            showScreen('stroop-screen'); 
+            nextStroopRound(); 
+        }
+        
+        function nextStroopRound() {
+            document.getElementById('stroop-score').innerText = stroopScore;
+            
+            let wordObj = stroopColors[Math.floor(Math.random() * stroopColors.length)];
+            let colorObj = stroopColors[Math.floor(Math.random() * stroopColors.length)];
+            stroopCorrectHex = colorObj.hex;
+            
+            const wordEl = document.getElementById('stroop-word');
+            wordEl.innerText = wordObj.name; 
+            wordEl.style.color = colorObj.hex;
+            
+            const btnContainer = document.getElementById('stroop-buttons');
+            btnContainer.innerHTML = '';
+            let optionsArr = [...stroopColors].sort(() => Math.random() - 0.5);
+            
+            optionsArr.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'action-btn'; 
+                btn.innerText = opt.name;
+                btn.onclick = () => handleStroopClick(opt.hex);
+                btnContainer.appendChild(btn);
+            });
+            
+            let timeMs = Math.max(1200, 3500 - (stroopScore * 80)); 
+            runProgressBar('stroop-progress', timeMs, () => gameOver(`Score: ${stroopScore}`, "Tempo esgotado!", stroopScore));
+        }
+        
+        function handleStroopClick(hex) {
+            if(hex === stroopCorrectHex) { 
+                playSuccess(); 
+                stroopScore++; 
+                nextStroopRound(); 
+            } else { 
+                let correctName = stroopColors.find(c => c.hex === stroopCorrectHex).name;
+                gameOver(`Score: ${stroopScore}`, `<p>A cor da tinta era <span class="highlight">${correctName}</span>!</p>`, stroopScore); 
+            }
+        }
+
+
+        // --- CÁLCULO MENTAL ---
+        let mathScore = 0, mathAnswer = 0;
+
+        function startMathGame() { 
+            mathScore = 0; 
+            showScreen('math-screen'); 
+            nextMathRound(); 
+        }
+        
+        function nextMathRound() {
+            document.getElementById('math-score').innerText = mathScore;
+            document.getElementById('math-input').value = ''; 
+            document.getElementById('math-input').focus();
+            
+            let a, b, op, symbol; 
+            let dif = Math.floor(mathScore / 5); 
+            
+            if(dif === 0) { 
+                a = Math.floor(Math.random()*10)+1; 
+                b = Math.floor(Math.random()*10)+1; 
+                op = 0; 
+            } else if (dif === 1) { 
+                a = Math.floor(Math.random()*20)+5; 
+                b = Math.floor(Math.random()*15)+1; 
+                op = Math.random() > 0.5 ? 0 : 1; 
+                if(op === 1 && b > a) [a,b] = [b,a]; 
+            } else { 
+                op = Math.floor(Math.random()*3);
+                if(op === 2) { 
+                    a = Math.floor(Math.random()*8)+2; 
+                    b = Math.floor(Math.random()*8)+2; 
+                } else { 
+                    a = Math.floor(Math.random()*50)+10; 
+                    b = Math.floor(Math.random()*30)+5; 
+                    if(op===1 && b>a) [a,b]=[b,a]; 
+                }
+            }
+
+            if(op === 0) { symbol = '+'; mathAnswer = a + b; }
+            if(op === 1) { symbol = '-'; mathAnswer = a - b; }
+            if(op === 2) { symbol = '×'; mathAnswer = a * b; }
+            
+            document.getElementById('math-equation').innerText = `${a} ${symbol} ${b} = ?`;
+            let timeMs = Math.max(2000, 6000 - (mathScore * 150));
+            runProgressBar('math-progress', timeMs, () => gameOver(`Score: ${mathScore}`, "Tempo esgotado!", mathScore));
+        }
+        
+        function checkMath() {
+            playClick(); 
+            const guess = parseInt(document.getElementById('math-input').value);
+            
+            if(guess === mathAnswer) { 
+                playSuccess(); 
+                mathScore++; 
+                nextMathRound(); 
+            } else { 
+                gameOver(`Score: ${mathScore}`, `<p>A resposta era <span class="highlight">${mathAnswer}</span>!</p>`, mathScore); 
+            }
+        }
+        
+        document.getElementById('math-input').addEventListener('keypress', e => { 
+            if (e.key === 'Enter') checkMath(); 
+        });
+
+    </script>
+</body>
+</html>
+
